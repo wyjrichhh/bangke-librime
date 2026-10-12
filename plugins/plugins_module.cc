@@ -49,7 +49,8 @@ void PluginManager::LoadPlugins(path plugins_dir) {
           LOG(INFO) << "loading plugin '" << plugin_name << "' from "
                     << plugin_file;
           try {
-            auto plugin_lib = boost::dll::shared_library(plugin_file);
+            // boost 1.74 的 shared_library 不接 std::filesystem::path。
+            auto plugin_lib = boost::dll::shared_library(plugin_file.string());
             plugin_libs_[plugin_name] = plugin_lib;
           } catch (const std::exception& ex) {
             LOG(ERROR) << "error loading plugin " << plugin_name << ": "

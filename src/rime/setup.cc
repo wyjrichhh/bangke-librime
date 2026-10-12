@@ -96,17 +96,13 @@ RIME_DLL void SetupLogging(const char* app_name,
     }
   }
   google::SetLogFilenameExtension(".log");
-  google::SetLogSymlink(google::GLOG_INFO, app_name);
-  google::SetLogSymlink(google::GLOG_WARNING, app_name);
-  google::SetLogSymlink(google::GLOG_ERROR, app_name);
+  // google::SetLogSymlink 在 glog 0.6.0 已被移除。
   // Do not allow other users to read/write log files created by current
   // process.
   FLAGS_logfile_mode = 0600;
-  if (google::IsGoogleLoggingInitialized()) {
-    LOG(WARNING) << "Glog is already initialized.";
-  } else {
-    google::InitGoogleLogging(app_name);
-  }
+  // 无条件初始化：glog 0.5（Ubuntu 22.04）没有 IsGoogleLoggingInitialized()，
+  // 而 InitGoogleLogging 重复调用本身是安全的。
+  google::InitGoogleLogging(app_name);
 #endif  // RIME_ENABLE_LOGGING
 }
 
