@@ -65,8 +65,10 @@ endif()
 # 按 CMAKE_SYSTEM_NAME 判断而不是 LINUX：后者从来没被定义过，Linux 上一直走的
 # 是 else 分支去要 Boost 1.77，在 22.04（1.74）上直接失败，boost 完全没链接。
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  # 强制 Module 模式，否则 ${Boost_LIBRARIES} 为空。
-  set(Boost_NO_BOOST_CMAKE ON)
+  # 老发行版（Ubuntu 22.04 / boost 1.74）需要强制 Module 模式，否则
+  # ${Boost_LIBRARIES} 为空 —— 但那是**调用方**的事：新版 CMake 已经不再提供
+  # FindBoost，在滚动发行版上强制 Module 模式会直接找不到 boost。所以这里不自己
+  # set，由构建脚本按平台传 -DBoost_NO_BOOST_CMAKE=ON。
   find_package(Boost 1.74.0 REQUIRED COMPONENTS regex filesystem system)
 else()
   find_package(Boost 1.77.0)
