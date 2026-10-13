@@ -77,7 +77,8 @@ release:
 	-DCMAKE_INSTALL_PREFIX=$(prefix) \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DBUILD_MERGED_PLUGINS=OFF \
-	-DENABLE_EXTERNAL_PLUGINS=ON
+	-DENABLE_EXTERNAL_PLUGINS=ON \
+	-DBUILD_TEST=OFF
 	cmake --build $(build)
 
 merged-plugins:
