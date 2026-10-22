@@ -4,7 +4,6 @@ dep_packages=(
     libboost-locale-dev
     libboost-regex-dev
     libboost-filesystem-dev
-    libboost-system-dev
     libgoogle-glog-dev
     libleveldb-dev
     libmarisa-dev

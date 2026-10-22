@@ -69,7 +69,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # ${Boost_LIBRARIES} 为空 —— 但那是**调用方**的事：新版 CMake 已经不再提供
   # FindBoost，在滚动发行版上强制 Module 模式会直接找不到 boost。所以这里不自己
   # set，由构建脚本按平台传 -DBoost_NO_BOOST_CMAKE=ON。
-  find_package(Boost 1.74.0 REQUIRED COMPONENTS regex filesystem system)
+  # Boost.System is header-only since 1.69; its stub library was removed in 1.89.
+  find_package(Boost 1.74.0 REQUIRED COMPONENTS regex filesystem)
 else()
   find_package(Boost 1.77.0)
 endif()
