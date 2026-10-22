@@ -1,149 +1,48 @@
-<meta charset="UTF-8">
+# bangke-librime
 
-RIME: Rime Input Method Engine
-===
-![Build status](https://github.com/rime/librime/actions/workflows/commit-ci.yml/badge.svg)
-[![GitHub release](https://img.shields.io/github/release/rime/librime.svg)](https://github.com/rime/librime/releases)
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+蚌壳拼音使用的 Rime 引擎分支，基于 [rime/librime](https://github.com/rime/librime)。负责三平台共享的引擎构建、插件装配和工具链兼容。
 
-Rime with your keystrokes.
+Rime 的输入方案、拼写运算和通用 API 请参阅[上游文档](https://github.com/rime/librime#readme)。本页介绍本分支维护的差异。
 
-Project home
----
-[rime.im](https://rime.im)
+## 本分支的扩展
 
-License
----
-[The 3-Clause BSD License](https://opensource.org/licenses/BSD-3-Clause)
+- **独立插件接入**：AI 预测实现已拆到 [bangke-ai-predict](https://github.com/wyjrichhh/bangke-ai-predict)，通过 Rime 插件构建机制接入。`plugins/ai-predict` 是插件集成位置；模型推理、上下文构造和候选重排由插件负责。
+- **Ubuntu 22.04 工具链兼容**：按 `CMAKE_SYSTEM_NAME` 识别 Linux，显式查找 Boost 1.74 的 regex、filesystem、system 组件；插件加载时将路径转为字符串，兼容旧版 Boost。Boost 的 Module / Config 查找模式由调用方选择，兼顾旧发行版和新 CMake。
+- **glog 兼容调整**：移除已删除的 `SetLogSymlink` 调用，调整初始化逻辑，适配发行版提供的日志库接口。
+- **Windows 源码编码**：MSVC 统一使用 `/utf-8`，避免中文注释和字符串受系统代码页影响。
+- **发行构建与测试分开**：`make release` 启用外部插件、关闭合并插件和测试；测试构建需显式开启 `BUILD_TEST`。
 
-Features
-===
-  - A modular, extensible input method engine in cross-platform C++ code,
-    built on top of open-source technologies
-  - Covering features found in a large variety of Chinese input methods,
-    either shape-based or phonetic-based
-  - Built with native support for Traditional Chinese, conversion to Simplified
-    Chinese and other regional standards via OpenCC
-  - Rime input schema, a DSL in YAML syntax for fast trying out innovative ideas
-    of input method design
-  - Spelling Algebra, a mechanism to create variant spelling, especially useful
-    for Chinese dialects
-  - Support for chord-typing with a generic Qwerty keyboard
+## 与前端、AI 插件的分工
 
-Install
-===
-Follow the instructions to build librime on platforms other than Linux:
-  - [macOS](https://github.com/rime/librime/tree/master/README-mac.md)
-  - [Windows](https://github.com/rime/librime/tree/master/README-windows.md)
-
-Build dependencies
----
-  - compiler with C++17 support
-  - cmake>=3.12
-  - libboost>=1.74
-  - libglog>=0.7 (optional)
-  - libleveldb
-  - libmarisa
-  - libopencc>=1.0.2
-  - libyaml-cpp>=0.5
-  - libgtest (optional)
-
-Runtime dependencies
----
-  - libboost
-  - libglog (optional)
-  - libleveldb
-  - libmarisa
-  - libopencc
-  - libyaml-cpp
-
-Build and install on Linux
----
-```
-make
-sudo make install
+```text
+平台前端 → librime 会话、方案与候选流水线 → ai_predict 插件 → CTranslate2 模型
+平台前端 ← 候选列表与 Context 属性通知 ← 插件异步推理结果
 ```
 
-Packaging status
----
-[![Packaging status](https://repology.org/badge/vertical-allrepos/librime.svg?columns=4&minversion=1.10.0)](https://repology.org/project/librime/versions)
+`ai_predict_translator`、`ai_predict_filter` 以及 `_refresh_ui` 等属性约定的生产和消费分别在插件与前端实现。这里提供共享引擎和插件运行基础，集成方式见[插件 README](https://github.com/wyjrichhh/bangke-ai-predict#readme)。
 
-Frontends
-===
+## 构建与验证
 
-Official:
-  - [ibus-rime](https://github.com/rime/ibus-rime): IBus frontend for Linux
-  - [Squirrel](https://github.com/rime/squirrel): frontend for macOS
-  - [Weasel](https://github.com/rime/weasel): frontend for Windows
+递归获取依赖后构建引擎：
 
-<!-- Sort in alphabetical order with :sort in vim -->
-Community:
-  - [ARIF](https://www.nongnu.org/arif/): frontend for Readline
-  - [Hamster](https://github.com/imfuxiao/Hamster): frontend for iOS
-  - [My RIME](https://github.com/LibreService/my_rime): frontend for web
-  - [PIME](https://github.com/EasyIME/PIME): frontend for Windows
-  - [Trime](https://github.com/osfans/trime): frontend for Android
-  - [XIME](https://github.com/stackia/XIME): frontend for macOS
-  - [YuyanIme](https://github.com/gurecn/YuyanIme): frontend for Android
-  - [coc-rime](https://github.com/tonyfettes/coc-rime): frontend for Vim
-  - [emacs-rime](https://github.com/DogLooksGood/emacs-rime): frontend for Emacs
-  - [fcitx-rime](https://github.com/fcitx/fcitx-rime): Fcitx frontend for Linux
-  - [fcitx5-android](https://github.com/fcitx5-android/fcitx5-android): frontend for Android
-  - [fcitx5-macos](https://github.com/fcitx-contrib/fcitx5-macos): Fcitx5 frontend for macOS
-  - [fcitx5-rime](https://github.com/fcitx/fcitx5-rime): Fcitx5 frontend for Linux
-  - [fcitx5-ui.nvim](https://github.com/black-desk/fcitx5-ui.nvim): Fcitx5 frontend for Vim
-  - [fcitx5.nvim](https://github.com/tonyfettes/fcitx5.nvim): Fcitx5 frontend for Vim
-  - [pyrime](https://github.com/Freed-Wu/pyrime): frontend for Ptpython
-  - [rabbit](https://github.com/amorphobia/rabbit): frontend for Windows
-  - [rime.nvim](https://github.com/Freed-Wu/rime.nvim): frontend for Vim
-  - [rl_custom_rime](https://github.com/Freed-Wu/rl_custom_rime): frontend for Readline
-  - [tmux-rime](https://github.com/Freed-Wu/tmux-rime): frontend for Tmux
-  - [zsh-rime](https://github.com/Freed-Wu/zsh-rime): frontend for Zsh
+```bash
+git submodule update --init --recursive
+make deps
+make release
+```
 
-Plugins
-===
-  - [librime-charcode](https://github.com/rime/librime-charcode) (Deprecated) Module that
-    deals with character encoding; depends on boost::locale and ICU libraries
-  - [librime-legacy](https://github.com/rime/librime-legacy) (Deprecated) Legacy module with
-    GPL-licensed code
-  - [librime-lua](https://github.com/hchunhui/librime-lua) Lua scripting
-  - [librime-octagram](https://github.com/lotem/librime-octagram) Language model
-  - [librime-predict](https://github.com/rime/librime-predict) Predict next word
-  - [librime-proto](https://github.com/lotem/librime-proto) IPC using CapnProto
+需要 AI 时，先按插件文档将源码接入 `plugins/ai-predict` 并构建 CTranslate2 依赖；仅编译引擎不会自动下载模型或完成输入法配置。
 
-Related works
-===
-  - [plum](https://github.com/rime/plum): Rime configuration (recipe) installer
-  - [combo-pinyin](https://github.com/rime/home/wiki/ComboPinyin): an innovative
-    chord-typing practice to input Pinyin
-  - [rime-essay](https://github.com/rime/rime-essay): the preset vocabulary
-  - [SCU](https://github.com/neolee/SCU): Squirrel Configuration Utilities
+测试需使用独立构建目录，并先准备所需依赖：
 
-Credits
-===
-We are grateful to the makers of the following open source libraries:
+```bash
+cmake -S . -B build-test -DBUILD_TEST=ON
+cmake --build build-test
+ctest --test-dir build-test --output-on-failure
+```
 
-  - [Boost C++ Libraries](http://www.boost.org/) (Boost Software License)
-  - [google-glog](https://github.com/google/glog) (The 3-Clause BSD License)
-  - [Google Test](https://github.com/google/googletest) (The 3-Clause BSD License)
-  - [LevelDB](https://github.com/google/leveldb) (The 3-Clause BSD License)
-  - [marisa-trie](https://github.com/s-yata/marisa-trie) (BSD 2-Clause License, LGPL 2.1)
-  - [OpenCC](https://github.com/BYVoid/OpenCC) (Apache License 2.0)
-  - [yaml-cpp](https://github.com/jbeder/yaml-cpp) (MIT License)
+平台说明：[macOS](README-mac.md)、[Windows](README-windows.md)。平台前端的打包脚本还负责各自的插件、模型与运行库装配。
 
-Contributors
-===
-  - [佛振](https://github.com/lotem)
-  - [鄒旭](https://github.com/zouxu09)
-  - [Weng Xuetian](http://csslayer.info)
-  - [Chongyu Zhu](http://lembacon.com)
-  - [Zhiwei Liu](https://github.com/liuzhiwei)
-  - [BYVoid](http://www.byvoid.com)
-  - [雪齋](https://github.com/LEOYoon-Tsaw)
-  - [瑾昀](https://github.com/kunki)
-  - [osfans](https://github.com/osfans)
-  - [jakwings](https://github.com/jakwings)
-  - [Prcuvu](https://github.com/Prcuvu)
-  - [hchunhui](https://github.com/hchunhui)
-  - [Qijia Liu](https://github.com/eagleoflqj)
-  - [WhiredPlanck](https://github.com/WhiredPlanck)
+## 上游与许可
+
+基础引擎来自 [rime/librime](https://github.com/rime/librime)，感谢上游及其依赖项目的贡献者。引擎采用 BSD-3-Clause，见 [LICENSE](LICENSE)；插件及依赖遵循各自许可。
