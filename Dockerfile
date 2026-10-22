@@ -7,6 +7,8 @@ RUN apt update && apt install -y \
   ninja-build \
   libboost-dev \
   libboost-regex-dev \
+  libboost-filesystem-dev \
+  libboost-system-dev \
   libboost-locale-dev \
   libgoogle-glog-dev \
   libgtest-dev \
