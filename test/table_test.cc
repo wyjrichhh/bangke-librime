@@ -38,8 +38,9 @@ class RimeTableTest : public ::testing::Test {
 rime::the<rime::Table> RimeTableTest::table_;
 
 TEST(RimeTableGrowthTest, ReloadsAfterStringTableGrowsMapping) {
-  rime::Table table(rime::path{"table_growth_test.bin"});
-  table.Remove();
+  rime::the<rime::Table> table(
+      new rime::Table(rime::path{"table_growth_test.bin"}));
+  table->Remove();
   rime::Syllabary syllabary{"one"};
   rime::Vocabulary vocabulary;
   auto entry = rime::New<rime::ShortDictEntry>();
@@ -48,16 +49,16 @@ TEST(RimeTableGrowthTest, ReloadsAfterStringTableGrowsMapping) {
   entry->weight = 1.0;
   vocabulary[0].entries.push_back(entry);
 
-  ASSERT_TRUE(table.Build(syllabary, vocabulary, 1));
-  ASSERT_GT(table.file_size(), entry->text.size());
-  ASSERT_TRUE(table.Save());
-  ASSERT_TRUE(table.Load());
-  EXPECT_EQ("one", table.GetSyllableById(0));
-  auto result = table.QueryWords(0);
+  ASSERT_TRUE(table->Build(syllabary, vocabulary, 1));
+  ASSERT_GT(table->file_size(), entry->text.size());
+  ASSERT_TRUE(table->Save());
+  ASSERT_TRUE(table->Load());
+  EXPECT_EQ("one", table->GetSyllableById(0));
+  auto result = table->QueryWords(0);
   ASSERT_FALSE(result.exhausted());
-  EXPECT_EQ(entry->text, table.GetEntryText(*result.entry()));
-  table.Close();
-  EXPECT_TRUE(table.Remove());
+  EXPECT_EQ(entry->text, table->GetEntryText(*result.entry()));
+  table->Close();
+  EXPECT_TRUE(table->Remove());
 }
 
 void RimeTableTest::PrepareSampleVocabulary(rime::Syllabary& syll,
