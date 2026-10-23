@@ -250,6 +250,10 @@ bool Table::OnBuildFinish() {
     LOG(ERROR) << "Error creating string table image.";
     return false;
   }
+  // Allocating the image may relocate the mapping; restore its cached pointers.
+  metadata_ = Find<table::Metadata>(0);
+  syllabary_ = metadata_->syllabary.get();
+  index_ = metadata_->index.get();
   string_table_builder_->Dump(image, image_size);
   metadata_->string_table = image;
   metadata_->string_table_size = image_size;
