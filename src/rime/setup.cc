@@ -84,6 +84,13 @@ RIME_DLL void SetupLogging(const char* app_name,
                            int min_log_level,
                            const char* log_dir) {
 #ifdef RIME_ENABLE_LOGGING
+#ifdef RIME_SHARED_GLOG
+  // Another input method may already own the process-wide logger.
+  if (google::IsGoogleLoggingInitialized()) {
+    return;
+  }
+#endif
+
   FLAGS_minloglevel = min_log_level;
 #ifdef RIME_ALSO_LOG_TO_STDERR
   FLAGS_alsologtostderr = true;
@@ -100,8 +107,7 @@ RIME_DLL void SetupLogging(const char* app_name,
   // Do not allow other users to read/write log files created by current
   // process.
   FLAGS_logfile_mode = 0600;
-  // 无条件初始化：glog 0.5（Ubuntu 22.04）没有 IsGoogleLoggingInitialized()，
-  // 而 InitGoogleLogging 重复调用本身是安全的。
+  // Legacy glog builds do not expose the initialization query.
   google::InitGoogleLogging(app_name);
 #endif  // RIME_ENABLE_LOGGING
 }
