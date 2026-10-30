@@ -21,7 +21,10 @@ if(ENABLE_EXTERNAL_PLUGINS)
   set(plugins_modules ${plugins_modules} "plugins")
 endif()
 
-if(DEFINED ENV{RIME_PLUGINS})
+if(DEFINED RIME_PLUGIN_LIST)
+  # An explicit empty list supports embedding the core without auto-discovery.
+  set(plugins "${RIME_PLUGIN_LIST}")
+elseif(DEFINED ENV{RIME_PLUGINS})
   set(plugins $ENV{RIME_PLUGINS})
   message(STATUS "Prescribed plugins: ${plugins}")
   if(NOT "${plugins}" STREQUAL "")
