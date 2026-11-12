@@ -8,13 +8,9 @@
 #include <rime/config.h>
 #include <rime/dict/user_dictionary.h>
 #include <rime/key_event.h>
+#include <initializer_list>
 #ifdef _WIN32
-#include <windows.h>
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <map>
-#include <stdexcept>
+#include <vector>
 #endif
 #ifndef _WIN32
 #include <rime/dict/entry_collector.h>
@@ -23,57 +19,49 @@
 namespace {
 constexpr char kPrivateText[] = "PRIVATE_INPUT_LOG_SENTINEL_4eb8";
 
-class DiagnosticCapture {
- public:
 #ifdef _WIN32
-  DiagnosticCapture() {
-    const char* directory = std::getenv("GLOG_log_dir");
-    if (!directory || !*directory)
-      throw std::runtime_error("Run through CTest to use its log directory");
-    directory_ = std::filesystem::u8path(directory);
-    suffix_ = "." + std::to_string(GetCurrentProcessId()) + ".log";
-    offsets_ = Snapshot();
+class RequiredDiagnostics final
+    : public testing::MatcherInterface<const std::string&> {
+ public:
+  explicit RequiredDiagnostics(std::initializer_list<const char*> tokens)
+      : tokens_(tokens.begin(), tokens.end()) {}
+
+  bool MatchAndExplain(const std::string& output,
+                       testing::MatchResultListener* listener) const override {
+    if (output.find(kPrivateText) != std::string::npos) {
+      *listener << "contains the private input sentinel";
+      return false;
+    }
+    for (const auto& token : tokens_) {
+      if (output.find(token) == std::string::npos) {
+        *listener << "is missing diagnostic: " << token;
+        return false;
+      }
+    }
+    return true;
   }
 
-  std::string Read() {
-    std::string output;
-    for (const auto& entry : Snapshot()) {
-      const auto found = offsets_.find(entry.first);
-      const auto offset = found == offsets_.end() ? 0 : found->second;
-      if (entry.second < offset)
-        throw std::runtime_error("Diagnostic log shrank during capture");
-      std::ifstream input(entry.first, std::ios::binary);
-      if (!input || !input.seekg(static_cast<std::streamoff>(offset)))
-        throw std::runtime_error("Cannot read current-process diagnostic log");
-      std::string appended(static_cast<size_t>(entry.second - offset), '\0');
-      if (!appended.empty() &&
-          !input.read(appended.data(),
-                      static_cast<std::streamsize>(appended.size())))
-        throw std::runtime_error("Cannot read new diagnostic log bytes");
-      output += appended;
-    }
-    return output;
+  void DescribeTo(std::ostream* stream) const override {
+    *stream
+        << "contains every required diagnostic and no private input sentinel";
   }
 
  private:
-  std::map<std::filesystem::path, std::uintmax_t> Snapshot() const {
-    std::map<std::filesystem::path, std::uintmax_t> files;
-    for (const auto& entry : std::filesystem::directory_iterator(directory_)) {
-      const auto name = entry.path().filename().u8string();
-      if (name.compare(0, 10, "rime.test.") == 0 &&
-          name.size() >= suffix_.size() &&
-          name.compare(name.size() - suffix_.size(), suffix_.size(), suffix_) ==
-              0 &&
-          !entry.is_symlink() && entry.is_regular_file())
-        files.emplace(entry.path(), entry.file_size());
-    }
-    return files;
-  }
+  std::vector<std::string> tokens_;
+};
 
-  std::filesystem::path directory_;
-  std::string suffix_;
-  std::map<std::filesystem::path, std::uintmax_t> offsets_;
+template <class Action>
+void ExpectDiagnostic(Action action,
+                      std::initializer_list<const char*> tokens) {
+  const testing::Matcher<const std::string&> matcher(
+      new RequiredDiagnostics(tokens));
+  // GTest starts the child with an OS stderr pipe before either CRT
+  // initializes.
+  EXPECT_EXIT(std::exit(action() ? 0 : 1), testing::ExitedWithCode(0), matcher);
+}
 #else
+class DiagnosticCapture {
+ public:
   DiagnosticCapture() { testing::internal::CaptureStderr(); }
   ~DiagnosticCapture() {
     if (active_)
@@ -86,41 +74,50 @@ class DiagnosticCapture {
 
  private:
   bool active_ = true;
-#endif
 };
 
-TEST(RimeLogPrivacyTest, InvalidKeysKeepCategoryAndHideRawInput) {
+template <class Action>
+void ExpectDiagnostic(Action action,
+                      std::initializer_list<const char*> tokens) {
   DiagnosticCapture capture;
-  rime::KeyEvent event;
-  EXPECT_FALSE(event.Parse(std::string(kPrivateText) + "+a"));
-  EXPECT_FALSE(event.Parse(kPrivateText));
+  EXPECT_TRUE(action());
   const auto output = capture.Read();
-  EXPECT_NE(output.find("key parse failed; type=unknown-modifier"),
-            std::string::npos);
-  EXPECT_NE(output.find("key parse failed; type=unknown-key"),
-            std::string::npos);
+  for (const auto* token : tokens)
+    EXPECT_NE(output.find(token), std::string::npos);
   EXPECT_EQ(output.find(kPrivateText), std::string::npos);
+}
+#endif
+
+TEST(RimeLogPrivacyTest, InvalidKeysKeepCategoryAndHideRawInput) {
+  ExpectDiagnostic(
+      [] {
+        rime::KeyEvent event;
+        const bool modifier = event.Parse(std::string(kPrivateText) + "+a");
+        const bool key = event.Parse(kPrivateText);
+        return !modifier && !key;
+      },
+      {"key parse failed; type=unknown-modifier",
+       "key parse failed; type=unknown-key"});
 }
 
 TEST(RimeLogPrivacyTest, UserDictionaryMetadataHidesTheRejectedValue) {
-  DiagnosticCapture capture;
-  const auto entry = rime::UserDictionary::CreateDictEntry(
-      std::string("a \t") + kPrivateText, std::string("c=") + kPrivateText, 1);
-  const auto output = capture.Read();
-  EXPECT_FALSE(entry);
-  EXPECT_NE(output.find("metadata invalid; field=commits"), std::string::npos);
-  EXPECT_EQ(output.find(kPrivateText), std::string::npos);
+  ExpectDiagnostic(
+      [] {
+        return !rime::UserDictionary::CreateDictEntry(
+            std::string("a \t") + kPrivateText,
+            std::string("c=") + kPrivateText, 1);
+      },
+      {"metadata invalid; field=commits"});
 }
 
 TEST(RimeLogPrivacyTest, InvalidYamlKeepsLocationWithoutQuotingTheDocument) {
-  DiagnosticCapture capture;
-  rime::Config config;
-  std::istringstream source(std::string("value: [") + kPrivateText);
-  EXPECT_FALSE(config.LoadFromStream(source));
-  const auto output = capture.Read();
-  EXPECT_NE(output.find("config load failed; stage=parse line="),
-            std::string::npos);
-  EXPECT_EQ(output.find(kPrivateText), std::string::npos);
+  ExpectDiagnostic(
+      [] {
+        rime::Config config;
+        std::istringstream source(std::string("value: [") + kPrivateText);
+        return !config.LoadFromStream(source);
+      },
+      {"config load failed; stage=parse line="});
 }
 
 #ifndef _WIN32

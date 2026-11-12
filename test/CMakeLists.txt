@@ -24,7 +24,3 @@ add_test(NAME rime_test
   WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 set_tests_properties(rime_test PROPERTIES ENVIRONMENT
   "GLOG_alsologtostderr=1;GLOG_log_dir=${EXECUTABLE_OUTPUT_PATH}")
-if(WIN32)
-  # The DLL's static CRT owns its buffers, independently of the test executable.
-  set_property(TEST rime_test APPEND PROPERTY ENVIRONMENT "GLOG_logbuflevel=-1")
-endif()
