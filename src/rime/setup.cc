@@ -11,6 +11,8 @@
 #include <glog/logging.h>
 #ifdef _WIN32
 #include <rime/windows_log_sink.h>
+#else
+#include <rime/posix_log_writer.h>
 #endif
 #else
 #include "no_logging.h"
@@ -124,6 +126,10 @@ RIME_DLL void SetupLogging(const char* app_name,
   FLAGS_logfile_mode = 0600;
   // Legacy glog builds do not expose the initialization query.
   google::InitGoogleLogging(app_name);
+#ifndef _WIN32
+  if ((!log_dir || log_dir[0]) && !PosixLogWriter::Install(log_dir, app_name))
+    google::LogToStderr();
+#endif
 #endif  // RIME_ENABLE_LOGGING
 }
 

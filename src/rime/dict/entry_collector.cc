@@ -132,26 +132,36 @@ void EntryCollector::Collect(const path& dict_file) {
 }
 
 void EntryCollector::Finish() {
+  const auto queued = encode_queue.size();
+  size_t queue_failed = 0;
   while (!encode_queue.empty()) {
     const auto& phrase(encode_queue.front().first);
     const auto& weight_str(encode_queue.front().second);
     if (!encoder->EncodePhrase(phrase, weight_str)) {
-      LOG(ERROR) << "dictionary encode failed; source=queue phrase_bytes="
-                 << phrase.size();
+      ++queue_failed;
     }
     encode_queue.pop();
+  }
+  if (queue_failed) {
+    LOG(ERROR) << "dictionary encode failed; source=queue reason=unencodable"
+               << " attempted=" << queued << " failed=" << queue_failed;
   }
   LOG(INFO) << "Pass 2: total " << num_entries << " entries collected.";
   if (preset_vocabulary) {
     preset_vocabulary->Reset();
     string phrase, weight_str;
+    size_t attempted = 0, failed = 0;
     while (preset_vocabulary->GetNextEntry(&phrase, &weight_str)) {
       if (collection.find(phrase) != collection.end())
         continue;
-      if (!encoder->EncodePhrase(phrase, weight_str)) {
-        LOG(WARNING) << "dictionary encode failed; source=preset phrase_bytes="
-                     << phrase.size();
-      }
+      ++attempted;
+      if (!encoder->EncodePhrase(phrase, weight_str))
+        ++failed;
+    }
+    if (failed) {
+      LOG(WARNING)
+          << "dictionary encode failed; source=preset reason=unencodable"
+          << " attempted=" << attempted << " failed=" << failed;
     }
   }
   decltype(collection)().swap(collection);

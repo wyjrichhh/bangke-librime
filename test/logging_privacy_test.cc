@@ -14,6 +14,9 @@
 #endif
 #ifndef _WIN32
 #include <rime/dict/entry_collector.h>
+#include <rime/dict/preset_vocabulary.h>
+#include <fstream>
+#include <unistd.h>
 #endif
 
 namespace {
@@ -124,9 +127,16 @@ TEST(RimeLogPrivacyTest, InvalidYamlKeepsLocationWithoutQuotingTheDocument) {
 // EntryCollector is an internal, non-exported class in the Windows DLL.
 class RejectingCollector : public rime::EntryCollector {
  public:
-  void RejectPendingPhrase(const std::string& phrase) {
+  void RejectPendingPhrase(const std::string& phrase, size_t count = 1) {
     encoder.reset(new RejectingEncoder(this));
-    encode_queue.emplace(phrase, "1");
+    for (size_t i = 0; i < count; ++i)
+      encode_queue.emplace(phrase, "1");
+    Finish();
+  }
+
+  void RejectPreset(const std::string& filename) {
+    encoder.reset(new RejectingEncoder(this));
+    preset_vocabulary.reset(new rime::PresetVocabulary(filename));
     Finish();
   }
 
@@ -139,6 +149,53 @@ class RejectingCollector : public rime::EntryCollector {
     }
   };
 };
+
+TEST(RimeLogPrivacyTest, BulkQueueReportsOneCompletePrivateSummary) {
+  DiagnosticCapture capture;
+  RejectingCollector collector;
+  collector.RejectPendingPhrase(kPrivateText, 150309);
+  const auto output = capture.Read();
+  const std::string category = "dictionary encode failed; source=queue";
+  const auto position = output.find(category);
+  ASSERT_NE(position, std::string::npos);
+  EXPECT_EQ(output.find(category, position + category.size()),
+            std::string::npos);
+  EXPECT_NE(output.find("attempted=150309 failed=150309"), std::string::npos);
+  EXPECT_EQ(output.find(kPrivateText), std::string::npos);
+  EXPECT_LT(output.size(), 4096u);
+}
+
+TEST(RimeLogPrivacyTest, BulkPresetReportsOneCompletePrivateSummary) {
+  char filename[] = "/tmp/rime-preset-test-XXXXXX.txt";
+  const int fd = mkstemps(filename, 4);
+  ASSERT_GE(fd, 0);
+  close(fd);
+  struct RemoveFixture {
+    const char* filename;
+    ~RemoveFixture() { unlink(filename); }
+  } cleanup{filename};
+  {
+    std::ofstream source(filename);
+    ASSERT_TRUE(source.good());
+    for (size_t i = 0; i < 150309; ++i)
+      source << kPrivateText << i << "\t1\n";
+    ASSERT_TRUE(source.good());
+  }
+  DiagnosticCapture capture;
+  RejectingCollector collector;
+  std::string resource(filename);
+  resource.resize(resource.size() - 4);
+  collector.RejectPreset(resource);
+  const auto output = capture.Read();
+  const std::string category = "dictionary encode failed; source=preset";
+  const auto position = output.find(category);
+  ASSERT_NE(position, std::string::npos);
+  EXPECT_EQ(output.find(category, position + category.size()),
+            std::string::npos);
+  EXPECT_NE(output.find("attempted=150309 failed=150309"), std::string::npos);
+  EXPECT_EQ(output.find(kPrivateText), std::string::npos);
+  EXPECT_LT(output.size(), 4096u);
+}
 
 TEST(RimeLogPrivacyTest, DictionaryErrorsAndWarningsHideWordsAndCodes) {
   const char* enabled = std::getenv("GLOG_alsologtostderr");
