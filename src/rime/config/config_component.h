@@ -30,7 +30,7 @@ class Config : public Class<Config, const string&>, public ConfigItemRef {
 
   // returns whether actually saved to file.
   bool Save();
-  bool LoadFromStream(std::istream& stream);
+  RIME_DLL bool LoadFromStream(std::istream& stream);
   bool SaveToStream(std::ostream& stream);
   RIME_DLL bool LoadFromFile(const path& file_path);
   RIME_DLL bool SaveToFile(const path& file_path);

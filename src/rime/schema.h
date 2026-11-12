@@ -14,8 +14,8 @@ namespace rime {
 
 class Schema {
  public:
-  Schema();
-  explicit Schema(const string& schema_id);
+  RIME_DLL Schema();
+  RIME_DLL explicit Schema(const string& schema_id);
   Schema(const string& schema_id, Config* config)
       : schema_id_(schema_id), config_(config) {}
 
