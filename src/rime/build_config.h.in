@@ -7,6 +7,7 @@
 
 #cmakedefine RIME_ENABLE_LOGGING
 #cmakedefine RIME_ALSO_LOG_TO_STDERR
+#cmakedefine RIME_SHARED_GLOG
 
 #cmakedefine RIME_DATA_DIR "@RIME_DATA_DIR@"
 #cmakedefine RIME_PLUGINS_DIR "@RIME_PLUGINS_DIR@"
