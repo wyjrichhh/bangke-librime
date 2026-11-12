@@ -63,7 +63,8 @@ struct DfsState {
   bool Backdate(const string& prefix) {
     DLOG(INFO) << "backdate; prefix: " << prefix;
     if (!accessor->Reset()) {
-      LOG(WARNING) << "backdating failed for '" << prefix << "'.";
+      LOG(WARNING) << "user dictionary backdate failed; prefix_bytes="
+                   << prefix.size();
       return false;
     }
     return NextEntry();
@@ -84,8 +85,9 @@ void DfsState::RecruitEntry(size_t pos,
       for (auto s = syllables.begin(); s != syllables.end(); ++s) {
         auto found = syllabary->find(*s);
         if (found == syllabary->end()) {
-          LOG(ERROR) << "failed to recruit dict entry '" << e->text
-                     << "', unrecognized syllable: " << *s;
+          LOG(ERROR) << "user dictionary recruit failed; type=unknown-syllable"
+                     << " syllable_index=" << (s - syllables.begin())
+                     << " syllable_bytes=" << s->size();
           return;
         }
         numeric_code.push_back(found->second);

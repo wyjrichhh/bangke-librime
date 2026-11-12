@@ -136,7 +136,8 @@ void EntryCollector::Finish() {
     const auto& phrase(encode_queue.front().first);
     const auto& weight_str(encode_queue.front().second);
     if (!encoder->EncodePhrase(phrase, weight_str)) {
-      LOG(ERROR) << "Encode failure: '" << phrase << "'.";
+      LOG(ERROR) << "dictionary encode failed; source=queue phrase_bytes="
+                 << phrase.size();
     }
     encode_queue.pop();
   }
@@ -148,7 +149,8 @@ void EntryCollector::Finish() {
       if (collection.find(phrase) != collection.end())
         continue;
       if (!encoder->EncodePhrase(phrase, weight_str)) {
-        LOG(WARNING) << "Encode failure: '" << phrase << "'.";
+        LOG(WARNING) << "dictionary encode failed; source=preset phrase_bytes="
+                     << phrase.size();
       }
     }
   }
@@ -196,8 +198,9 @@ void EntryCollector::CreateEntry(const string& word,
       if (build_syllabary) {
         syllabary.insert(s);
       } else {
-        LOG(ERROR) << "dropping entry '" << e->text
-                   << "' with invalid syllable: " << s;
+        LOG(ERROR) << "dictionary entry rejected; type=unknown-syllable"
+                   << " entry_index=" << num_entries
+                   << " syllable_bytes=" << s.size();
         return;
       }
     }
@@ -209,8 +212,9 @@ void EntryCollector::CreateEntry(const string& word,
     if (std::find_if(weights.begin(), weights.end(), [&](const auto& p) {
           return p.first == code_str;
         }) != weights.end()) {
-      LOG(WARNING) << "duplicate word definition '" << e->text << "': ["
-                   << code_str << "].";
+      LOG(WARNING) << "dictionary entry rejected; type=duplicate"
+                   << " entry_index=" << num_entries
+                   << " code_bytes=" << code_str.size();
       return;
     }
     weights.push_back(std::make_pair(code_str, e->weight));

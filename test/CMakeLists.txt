@@ -22,3 +22,5 @@ file(COPY ${test_data_files} DESTINATION ${EXECUTABLE_OUTPUT_PATH})
 add_test(NAME rime_test
   COMMAND rime_test
   WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
+set_tests_properties(rime_test PROPERTIES ENVIRONMENT
+  "GLOG_alsologtostderr=1;GLOG_log_dir=${EXECUTABLE_OUTPUT_PATH}")

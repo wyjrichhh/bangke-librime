@@ -524,8 +524,8 @@ bool Table::BuildEntry(const ShortDictEntry& dict_entry, table::Entry* entry) {
   if (!entry)
     return false;
   if (!AddString(dict_entry.text, &entry->text, dict_entry.weight)) {
-    LOG(ERROR) << "Error creating table entry '" << dict_entry.text
-               << "'; file size: " << file_size();
+    LOG(ERROR) << "table entry creation failed; text_bytes="
+               << dict_entry.text.size() << " file_bytes=" << file_size();
     return false;
   }
   entry->weight = static_cast<table::Weight>(dict_entry.weight);

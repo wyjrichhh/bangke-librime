@@ -767,13 +767,13 @@ RIME_DEPRECATED void RimeConfigEnd(RimeConfigIterator* iterator) {
 
 RIME_DEPRECATED Bool RimeSimulateKeySequence(RimeSessionId session_id,
                                              const char* key_sequence) {
-  LOG(INFO) << "simulate key sequence: " << key_sequence;
+  LOG(INFO) << "simulate key sequence";
   an<Session> session(Service::instance().GetSession(session_id));
   if (!session)
     return False;
   KeySequence keys;
   if (!keys.Parse(key_sequence)) {
-    LOG(ERROR) << "error parsing input: '" << key_sequence << "'";
+    LOG(ERROR) << "input simulation failed; type=invalid-key-sequence";
     return False;
   }
   for (const KeyEvent& key : keys) {

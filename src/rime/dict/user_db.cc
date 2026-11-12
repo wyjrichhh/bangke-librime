@@ -43,8 +43,11 @@ bool UserDbValue::Unpack(const string& value) {
         tick = std::stoul(v);
       }
     } catch (...) {
-      LOG(ERROR) << "failed in parsing key-value from userdb entry '" << k_eq_v
-                 << "'.";
+      LOG(ERROR) << "user dictionary metadata invalid; field="
+                 << (k == "c"   ? "commits"
+                     : k == "d" ? "weight"
+                                : "tick")
+                 << " value_bytes=" << v.size();
       return false;
     }
   }

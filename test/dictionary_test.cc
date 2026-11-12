@@ -10,6 +10,9 @@
 #include <rime/algo/syllabifier.h>
 #include <rime/dict/dictionary.h>
 #include <rime/dict/dict_compiler.h>
+#include <rime/service.h>
+#include <cstring>
+#include <stdexcept>
 
 class RimeDictionaryTest : public ::testing::Test {
  public:
@@ -40,6 +43,41 @@ bool RimeDictionaryTest::rebuilt_ = false;
 
 TEST_F(RimeDictionaryTest, Ready) {
   EXPECT_TRUE(dict_->loaded());
+}
+
+TEST_F(RimeDictionaryTest, ResourceNotificationsDescribeOnlyLoadTransitions) {
+  auto& service = rime::Service::instance();
+  struct ClearHandler {
+    ~ClearHandler() { rime::Service::instance().ClearNotificationHandler(); }
+  } clear;
+  std::vector<std::string> events;
+  service.SetNotificationHandler([&events](auto, auto type, auto value) {
+    if (std::strcmp(type, "resource") == 0)
+      events.push_back(value);
+  });
+  rime::Dictionary fresh(
+      "resource-test", {},
+      {rime::New<rime::Table>(rime::path{"dictionary_test.table.bin"})},
+      rime::New<rime::Prism>(rime::path{"dictionary_test.prism.bin"}));
+  ASSERT_TRUE(fresh.Load());
+  ASSERT_TRUE(fresh.Load());
+  EXPECT_EQ(events, std::vector<std::string>{"dictionary.ready"});
+  rime::Dictionary empty("private-resource-id", {}, {}, nullptr);
+  EXPECT_FALSE(empty.Load());
+  rime::Dictionary invalid("private-resource-id", {}, {nullptr}, nullptr);
+  EXPECT_FALSE(invalid.Load());
+  rime::Dictionary no_prism(
+      "private-resource-id", {},
+      {rime::New<rime::Table>(rime::path{"dictionary_test.table.bin"})},
+      nullptr);
+  EXPECT_FALSE(no_prism.Load());
+  EXPECT_EQ(events, (std::vector<std::string>{
+                        "dictionary.ready", "dictionary.failed.no-table",
+                        "dictionary.failed.table", "dictionary.failed.prism"}));
+  service.SetNotificationHandler([](auto, auto, auto) {
+    throw std::runtime_error("synthetic diagnostic consumer failure");
+  });
+  EXPECT_NO_THROW(EXPECT_FALSE(empty.Load()));
 }
 
 TEST_F(RimeDictionaryTest, SimpleLookup) {

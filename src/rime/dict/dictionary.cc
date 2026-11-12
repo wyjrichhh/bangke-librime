@@ -5,6 +5,7 @@
 // 2011-07-05 GONG Chen <chen.sst@gmail.com>
 //
 #include <filesystem>
+#include <cstdio>
 #include <rime/algo/syllabifier.h>
 #include <rime/common.h>
 #include <rime/dict/dictionary.h>
@@ -15,6 +16,17 @@
 #include <utility>
 
 namespace rime {
+
+namespace {
+void NotifyDictionaryResource(const char* token) noexcept {
+  try {
+    Service::instance().Notify(0, "resource", token);
+  } catch (...) {
+    // Diagnostic callbacks must not prevent ordinary dictionary input.
+    std::fputs("dictionary: resource notification failed\n", stderr);
+  }
+}
+}  // namespace
 
 namespace dictionary {
 
@@ -377,19 +389,23 @@ bool Dictionary::Remove() {
 }
 
 bool Dictionary::Load() {
+  const bool was_loaded = loaded();
   LOG(INFO) << "loading dictionary '" << name_ << "'.";
   if (tables_.empty()) {
     LOG(ERROR) << "Cannot load dictionary '" << name_
                << "'; it contains no tables.";
+    NotifyDictionaryResource("dictionary.failed.no-table");
     return false;
   }
   auto& primary_table = tables_[0];
   if (!primary_table || (!primary_table->IsOpen() && !primary_table->Load())) {
     LOG(ERROR) << "Error loading table for dictionary '" << name_ << "'.";
+    NotifyDictionaryResource("dictionary.failed.table");
     return false;
   }
   if (!prism_ || (!prism_->IsOpen() && !prism_->Load())) {
     LOG(ERROR) << "Error loading prism for dictionary '" << name_ << "'.";
+    NotifyDictionaryResource("dictionary.failed.prism");
     return false;
   }
   // packs are optional
@@ -399,11 +415,14 @@ bool Dictionary::Load() {
       LOG(INFO) << "loaded pack: " << packs_[i - 1];
     }
   }
+  if (!was_loaded)
+    NotifyDictionaryResource("dictionary.ready");
   return true;
 }
 
 bool Dictionary::loaded() const {
-  return !tables_.empty() && tables_[0]->IsOpen() && prism_ && prism_->IsOpen();
+  return !tables_.empty() && tables_[0] && tables_[0]->IsOpen() && prism_ &&
+         prism_->IsOpen();
 }
 
 // DictionaryComponent members

@@ -66,7 +66,8 @@ bool KeyEvent::Parse(const string& repr) {
       if (mask) {
         modifier_ |= mask;
       } else {
-        LOG(ERROR) << "parse error: unrecognized modifier '" << token << "'";
+        LOG(ERROR) << "key parse failed; type=unknown-modifier token_bytes="
+                   << token.size() << " offset=" << start;
         return false;
       }
       start = found + 1;
@@ -74,7 +75,8 @@ bool KeyEvent::Parse(const string& repr) {
     token = repr.substr(start);
     keycode_ = RimeGetKeycodeByName(token.c_str());
     if (keycode_ == XK_VoidSymbol) {
-      LOG(ERROR) << "parse error: unrecognized key '" << token << "'";
+      LOG(ERROR) << "key parse failed; type=unknown-key token_bytes="
+                 << token.size() << " offset=" << start;
       return false;
     }
   }

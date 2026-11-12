@@ -9,6 +9,9 @@
 
 #ifdef RIME_ENABLE_LOGGING
 #include <glog/logging.h>
+#ifdef _WIN32
+#include <rime/windows_log_sink.h>
+#endif
 #else
 #include "no_logging.h"
 #endif  // RIME_ENABLE_LOGGING
@@ -92,6 +95,8 @@ RIME_DLL void SetupLogging(const char* app_name,
 #endif
 
   FLAGS_minloglevel = min_log_level;
+  // Bound active files while the frontend archives closed logs asynchronously.
+  FLAGS_max_log_size = 4;
 #ifdef RIME_ALSO_LOG_TO_STDERR
   FLAGS_alsologtostderr = true;
 #endif  // RIME_ALSO_LOG_TO_STDERR
@@ -99,11 +104,21 @@ RIME_DLL void SetupLogging(const char* app_name,
     if (log_dir[0] == '\0') {
       google::LogToStderr();
     } else {
+#ifdef _WIN32
+      static WindowsLogSink sink;
+      if (sink.Configure(log_dir, app_name)) {
+        google::InitGoogleLogging(app_name);
+        sink.Register();
+        google::LogToStderr();
+        return;
+      }
+      google::LogToStderr();
+#else
       FLAGS_log_dir = log_dir;
+#endif
     }
   }
   google::SetLogFilenameExtension(".log");
-  // google::SetLogSymlink 在 glog 0.6.0 已被移除。
   // Do not allow other users to read/write log files created by current
   // process.
   FLAGS_logfile_mode = 0600;

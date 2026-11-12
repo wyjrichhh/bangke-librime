@@ -3,6 +3,7 @@
 // Distributed under the BSD License
 //
 #include <cctype>
+#include <cerrno>
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
@@ -39,7 +40,8 @@ bool ConfigData::LoadFromStream(std::istream& stream) {
     YAML::Node doc = YAML::Load(stream);
     root = ConvertFromYaml(doc, nullptr);
   } catch (YAML::Exception& e) {
-    LOG(ERROR) << "Error parsing YAML: " << e.what();
+    LOG(ERROR) << "config load failed; stage=parse line=" << e.mark.line
+               << " column=" << e.mark.column;
     return false;
   }
   return true;
@@ -72,10 +74,17 @@ bool ConfigData::LoadFromFile(const path& file_path, ConfigCompiler* compiler) {
   }
   LOG(INFO) << "loading config file '" << file_path << "'.";
   try {
-    YAML::Node doc = YAML::LoadFile(file_path.string());
+    std::ifstream stream{std::filesystem::path(file_path)};
+    if (!stream) {
+      LOG(ERROR) << "config load failed; stage=open code=" << errno
+                 << " file=" << file_path;
+      return false;
+    }
+    YAML::Node doc = YAML::Load(stream);
     root = ConvertFromYaml(doc, compiler);
   } catch (YAML::Exception& e) {
-    LOG(ERROR) << "Error parsing YAML \"" << file_path << "\" : " << e.what();
+    LOG(ERROR) << "config load failed; stage=parse line=" << e.mark.line
+               << " column=" << e.mark.column << " file=" << file_path;
     return false;
   }
   return true;

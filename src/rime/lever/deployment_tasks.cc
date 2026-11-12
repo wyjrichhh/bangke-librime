@@ -8,6 +8,7 @@
 #include <rime/build_config.h>
 
 #include <algorithm>
+#include <chrono>
 #include <boost/algorithm/string.hpp>
 #include <filesystem>
 #include <boost/uuid/random_generator.hpp>
@@ -632,6 +633,9 @@ bool CleanOldLogFiles::Run(Deployer* deployer) {
   time_t now = time(NULL);
   strftime(ymd, sizeof(ymd), ".%Y%m%d", localtime(&now));
   string today(ymd);
+  // Frontends archive closed files first; this is only an expiry fallback.
+  const auto expiry =
+      fs::file_time_type::clock::now() - std::chrono::hours(14 * 24);
   DLOG(INFO) << "today: " << today;
 
   vector<string> dirs(google::GetLoggingDirectories());
@@ -654,14 +658,32 @@ bool CleanOldLogFiles::Run(Deployer* deployer) {
         if (entry.is_regular_file() && !entry.is_symlink() &&
             boost::starts_with(file_name, app_name) &&
             boost::ends_with(file_name, ".log") &&
-            !boost::contains(file_name, today)) {
-          files_to_remove.push_back(entry.path());
+            !boost::contains(file_name, today) &&
+            entry.last_write_time() < expiry) {
+          std::error_code error;
+          const auto links = fs::hard_link_count(entry.path(), error);
+          if (error) {
+            if (error != std::errc::no_such_file_or_directory) {
+              LOG(WARNING) << "log cleanup inspection failed; code="
+                           << error.value() << " file=" << entry.path();
+              success = false;
+            }
+            continue;
+          }
+          if (links != 1)
+            continue;
+          files_to_remove.push_back(
+              fs::absolute(entry.path()).lexically_normal());
         } else if (entry.is_symlink()) {
           auto target = fs::read_symlink(entry.path());
           const string& target_file_name(target.filename().u8string());
           if (boost::starts_with(target_file_name, app_name) &&
               boost::ends_with(target_file_name, ".log")) {
-            files_in_use.insert(target);
+            files_in_use.insert(
+                fs::absolute(target.is_absolute()
+                                 ? target
+                                 : entry.path().parent_path() / target)
+                    .lexically_normal());
           }
         }
       }
@@ -673,14 +695,36 @@ bool CleanOldLogFiles::Run(Deployer* deployer) {
     }
     // remove files
     for (const auto& file : files_to_remove) {
-      if (files_in_use.find(file.filename()) != files_in_use.end())
+      if (files_in_use.find(file.lexically_normal()) != files_in_use.end())
         continue;
       try {
+        std::error_code error;
+        const auto status = fs::symlink_status(file, error);
+        if (error == std::errc::no_such_file_or_directory)
+          continue;
+        if (error) {
+          LOG(WARNING) << "log cleanup inspection failed; code="
+                       << error.value() << " file=" << file;
+          success = false;
+          continue;
+        }
+        if (!fs::is_regular_file(status))
+          continue;
+        const auto links = fs::hard_link_count(file, error);
+        if (error == std::errc::no_such_file_or_directory)
+          continue;
+        if (error) {
+          LOG(WARNING) << "log cleanup inspection failed; code="
+                       << error.value() << " file=" << file;
+          success = false;
+          continue;
+        }
+        if (links != 1)
+          continue;
         DLOG(INFO) << "removing log file '" << file.filename() << "'.";
-        // ensure write permission
-        fs::permissions(file, fs::perms::owner_write);
-        fs::remove(file);
-        ++removed;
+        // Never chmod an inode that another path could also reference.
+        if (fs::remove(file))
+          ++removed;
       } catch (const fs::filesystem_error& ex) {
         LOG(ERROR) << ex.what();
         success = false;
