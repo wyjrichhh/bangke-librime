@@ -404,6 +404,7 @@ static bool ConfigNeedsUpdate(Config* config) {
   }
   the<ResourceResolver> resolver(Service::instance().CreateResourceResolver(
       {"config_source_file", "", ".yaml"}));
+  auto checksums = build_info["checksums"];
   for (auto entry : *timestamps.AsMap()) {
     auto value = As<ConfigValue>(entry.second);
     int recorded_time = 0;
@@ -418,6 +419,18 @@ static bool ConfigNeedsUpdate(Config* config) {
         return true;
       }
       continue;
+    }
+    ChecksumComputer checksum;
+    if (!checksum.ProcessFileChecked(source_file)) {
+      LOG(ERROR) << "cannot checksum config resource '" << entry.first << "'.";
+      return true;
+    }
+    // Legacy metadata is rebuilt once when its source is available.
+    if (!checksums.IsMap() ||
+        checksums[entry.first].ToString() !=
+            std::to_string(checksum.Checksum())) {
+      LOG(INFO) << "config resource checksum changed: " << entry.first;
+      return true;
     }
     if (recorded_time !=
         (int)filesystem::to_time_t(fs::last_write_time(source_file))) {

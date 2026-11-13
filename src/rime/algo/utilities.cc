@@ -32,9 +32,13 @@ ChecksumComputer::ChecksumComputer(uint32_t initial_remainder)
     : crc_(initial_remainder) {}
 
 void ChecksumComputer::ProcessFile(const path& file_path) {
-  std::ifstream fin(file_path.c_str(), std::ios::binary);
+  ProcessFileChecked(file_path);
+}
+
+bool ChecksumComputer::ProcessFileChecked(const path& file_path) {
+  std::ifstream fin(file_path, std::ios::binary);
   if (!fin)
-    return;
+    return false;
 
   std::array<char, buffer_size> buffer;
   while (fin) {
@@ -44,6 +48,7 @@ void ChecksumComputer::ProcessFile(const path& file_path) {
       crc_.process_bytes(buffer.data(), bytes_read);
     }
   }
+  return fin.eof() && !fin.bad();
 }
 
 uint32_t ChecksumComputer::Checksum() {

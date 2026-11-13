@@ -1,4 +1,5 @@
 aux_source_directory(. rime_test_src)
+list(REMOVE_ITEM rime_test_src ./config_deployment_test.cc)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/test)
 add_executable(rime_test ${rime_test_src})
 target_link_libraries(rime_test
@@ -24,3 +25,11 @@ add_test(NAME rime_test
   WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 set_tests_properties(rime_test PROPERTIES ENVIRONMENT
   "GLOG_alsologtostderr=1;GLOG_log_dir=${EXECUTABLE_OUTPUT_PATH}")
+
+# Deployment needs separate source and output directories from the other tests.
+add_executable(config_deployment_test config_deployment_test.cc)
+target_link_libraries(config_deployment_test ${rime_library} ${GTEST_LIBRARIES})
+if(BUILD_SHARED_LIBS)
+  target_compile_definitions(config_deployment_test PRIVATE RIME_IMPORTS)
+endif()
+add_test(NAME config_deployment_test COMMAND config_deployment_test)

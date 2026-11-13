@@ -19,6 +19,7 @@ class ChecksumComputer {
  public:
   explicit ChecksumComputer(uint32_t initial_remainder = 0);
   void ProcessFile(const path& file_path);
+  bool ProcessFileChecked(const path& file_path);
   uint32_t Checksum();
 
  private:
