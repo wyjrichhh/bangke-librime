@@ -7,6 +7,9 @@ target_link_libraries(rime_test
   ${rime_dict_library}
   ${rime_gears_library}
   ${GTEST_LIBRARIES})
+if(BUILD_SHARED_LIBS AND BUILD_SEPARATE_LIBS)
+  target_link_libraries(rime_test ${rime_levers_library})
+endif()
 if(BUILD_SHARED_LIBS)
   target_compile_definitions(rime_test PRIVATE RIME_IMPORTS)
 endif(BUILD_SHARED_LIBS)
@@ -29,6 +32,10 @@ set_tests_properties(rime_test PROPERTIES ENVIRONMENT
 # Deployment needs separate source and output directories from the other tests.
 add_executable(config_deployment_test config_deployment_test.cc)
 target_link_libraries(config_deployment_test ${rime_library} ${GTEST_LIBRARIES})
+if(BUILD_SHARED_LIBS AND BUILD_SEPARATE_LIBS)
+  target_link_libraries(config_deployment_test
+    ${rime_dict_library} ${rime_gears_library} ${rime_levers_library})
+endif()
 if(BUILD_SHARED_LIBS)
   target_compile_definitions(config_deployment_test PRIVATE RIME_IMPORTS)
 endif()

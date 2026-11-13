@@ -4,8 +4,6 @@
 //
 // 2013-01-30 GONG Chen <chen.sst@gmail.com>
 //
-#include <fstream>
-#include <array>
 #include <rime/algo/utilities.h>
 
 namespace rime {
@@ -36,19 +34,7 @@ void ChecksumComputer::ProcessFile(const path& file_path) {
 }
 
 bool ChecksumComputer::ProcessFileChecked(const path& file_path) {
-  std::ifstream fin(file_path, std::ios::binary);
-  if (!fin)
-    return false;
-
-  std::array<char, buffer_size> buffer;
-  while (fin) {
-    fin.read(buffer.data(), buffer_size);
-    std::streamsize bytes_read = fin.gcount();
-    if (bytes_read > 0) {
-      crc_.process_bytes(buffer.data(), bytes_read);
-    }
-  }
-  return fin.eof() && !fin.bad();
+  return ChecksumFileChecked(file_path, crc_);
 }
 
 uint32_t ChecksumComputer::Checksum() {

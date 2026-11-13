@@ -8,12 +8,30 @@
 #define RIME_UTILITIES_H_
 
 #include <stdint.h>
+#include <array>
+#include <fstream>
 #include <boost/crc.hpp>
 #include <rime/common.h>
 
 namespace rime {
 
 int CompareVersionString(const string& x, const string& y);
+
+// Keep the checked reader usable by core without linking the dictionary module.
+inline bool ChecksumFileChecked(const path& file_path,
+                                boost::crc_32_type& crc) {
+  std::ifstream fin(file_path, std::ios::binary);
+  if (!fin)
+    return false;
+  std::array<char, 64 * 1024> buffer;
+  while (fin) {
+    fin.read(buffer.data(), buffer.size());
+    const auto bytes_read = fin.gcount();
+    if (bytes_read > 0)
+      crc.process_bytes(buffer.data(), bytes_read);
+  }
+  return fin.eof() && !fin.bad();
+}
 
 class ChecksumComputer {
  public:
@@ -24,7 +42,6 @@ class ChecksumComputer {
 
  private:
   boost::crc_32_type crc_;
-  static constexpr size_t buffer_size = 64 * 1024;  // 64 KB
 };
 
 inline uint32_t Checksum(const path& file_path) {

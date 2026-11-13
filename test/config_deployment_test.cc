@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <rime_api.h>
 #include <rime/algo/fs.h>
+#include <rime/algo/utilities.h>
 #include <rime/config.h>
 #include <rime/config/config_compiler.h>
 #include <rime/config/plugins.h>
@@ -77,6 +78,24 @@ class ConfigDeploymentTest : public testing::Test {
   std::string id;
   fs::path source, custom, output;
 };
+
+TEST_F(ConfigDeploymentTest, ChecksumReaderPreservesLegacyAccumulation) {
+  Write(source, "a");
+  Write(custom, "bc");
+  boost::crc_32_type crc(0);
+  ASSERT_TRUE(rime::ChecksumFileChecked(source, crc));
+  ASSERT_TRUE(rime::ChecksumFileChecked(custom, crc));
+  // CRC32 of "abc" with the existing zero initial remainder.
+  EXPECT_EQ(0x359a672fu, crc.checksum());
+  EXPECT_FALSE(rime::ChecksumFileChecked(root / "absent", crc));
+  EXPECT_EQ(0x359a672fu, crc.checksum());
+#if !defined(_WIN32) || !defined(RIME_BUILD_SHARED_LIBS)
+  rime::ChecksumComputer legacy;
+  legacy.ProcessFile(source);
+  ASSERT_TRUE(legacy.ProcessFileChecked(custom));
+  EXPECT_EQ(0x359a672fu, legacy.Checksum());
+#endif
+}
 
 TEST_F(ConfigDeploymentTest, SameSecondPatchChange) {
   auto first = fs::file_time_type::clock::now() - std::chrono::hours(24);

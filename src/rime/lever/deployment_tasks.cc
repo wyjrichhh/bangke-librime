@@ -420,15 +420,15 @@ static bool ConfigNeedsUpdate(Config* config) {
       }
       continue;
     }
-    ChecksumComputer checksum;
-    if (!checksum.ProcessFileChecked(source_file)) {
+    boost::crc_32_type checksum(0);
+    if (!ChecksumFileChecked(source_file, checksum)) {
       LOG(ERROR) << "cannot checksum config resource '" << entry.first << "'.";
       return true;
     }
     // Legacy metadata is rebuilt once when its source is available.
     if (!checksums.IsMap() ||
         checksums[entry.first].ToString() !=
-            std::to_string(checksum.Checksum())) {
+            std::to_string(checksum.checksum())) {
       LOG(INFO) << "config resource checksum changed: " << entry.first;
       return true;
     }
