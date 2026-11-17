@@ -2,7 +2,7 @@
 #include <rime/schema.h>
 
 TEST(RimeSchemaTest, RuntimePageSizeRejectsInvalidValues) {
-  rime::Schema schema(".config_test");
+  rime::Schema schema(".config_test", nullptr);
   EXPECT_EQ(5, schema.page_size());
   ASSERT_TRUE(schema.set_page_size(100));
   EXPECT_EQ(100, schema.page_size());
