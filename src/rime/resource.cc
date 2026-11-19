@@ -4,7 +4,7 @@
 //
 
 #include <boost/algorithm/string.hpp>
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <rime/resource.h>
 
 namespace rime {
@@ -27,16 +27,16 @@ string ResourceResolver::ToFilePath(const string& resource_id) const {
 }
 
 path ResourceResolver::ResolvePath(const string& resource_id) {
-  return std::filesystem::absolute(root_path_ /
+  return rime::fs::absolute(root_path_ /
                                    (type_.prefix + resource_id + type_.suffix));
 }
 
 path FallbackResourceResolver::ResolvePath(const string& resource_id) {
   auto default_path = ResourceResolver::ResolvePath(resource_id);
-  if (!std::filesystem::exists(default_path)) {
-    auto fallback_path = std::filesystem::absolute(
+  if (!rime::fs::exists(default_path)) {
+    auto fallback_path = rime::fs::absolute(
         fallback_root_path_ / (type_.prefix + resource_id + type_.suffix));
-    if (std::filesystem::exists(fallback_path)) {
+    if (rime::fs::exists(fallback_path)) {
       return fallback_path;
     }
   }

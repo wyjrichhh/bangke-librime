@@ -6,12 +6,12 @@
 //
 #include <utility>
 #include <boost/algorithm/string.hpp>
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <rime/config.h>
 #include <rime/deployer.h>
 #include <rime/lever/switcher_settings.h>
 
-namespace fs = std::filesystem;
+namespace fs = rime::fs;
 
 namespace rime {
 

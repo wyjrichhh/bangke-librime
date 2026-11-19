@@ -4,14 +4,14 @@
 //
 // 2011-12-12 GONG Chen <chen.sst@gmail.com>
 //
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <stdint.h>
 #include <rime/common.h>
 #include <rime/config.h>
 #include <rime/algo/utilities.h>
 #include <rime/lever/customizer.h>
 
-namespace fs = std::filesystem;
+namespace fs = rime::fs;
 
 namespace rime {
 

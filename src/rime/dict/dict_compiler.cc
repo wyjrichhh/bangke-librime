@@ -4,7 +4,7 @@
 //
 // 2011-11-27 GONG Chen <chen.sst@gmail.com>
 //
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <cfloat>
 #include <cmath>
 #include <fstream>
@@ -51,7 +51,7 @@ static bool get_dict_files_from_settings(vector<path>* dict_files,
     for (auto it = tables->begin(); it != tables->end(); ++it) {
       string dict_name = As<ConfigValue>(*it)->str();
       auto dict_file = source_resolver->ResolvePath(dict_name + ".dict.yaml");
-      if (!std::filesystem::exists(dict_file)) {
+      if (!rime::fs::exists(dict_file)) {
         LOG(ERROR) << "source file '" << dict_file << "' does not exist.";
         return false;
       }
@@ -82,7 +82,7 @@ bool DictCompiler::Compile(const path& schema_file) {
   bool build_table_from_source = true;
   DictSettings settings;
   auto dict_file = source_resolver_->ResolvePath(dict_name_ + ".dict.yaml");
-  if (!std::filesystem::exists(dict_file)) {
+  if (!rime::fs::exists(dict_file)) {
     LOG(ERROR) << "source file '" << dict_file << "' does not exist.";
     build_table_from_source = false;
   } else if (!load_dict_settings_from_file(&settings, dict_file)) {
@@ -165,7 +165,7 @@ bool DictCompiler::Compile(const path& schema_file) {
     EntryCollector collector(std::move(syllabary));
     DictSettings settings;
     auto dict_file = source_resolver_->ResolvePath(pack_name + ".dict.yaml");
-    if (!std::filesystem::exists(dict_file)) {
+    if (!rime::fs::exists(dict_file)) {
       if (pack_table->Exists())
         LOG(INFO) << "pack source file '" << dict_file
                   << "' does not exist, using prebuilt table '"

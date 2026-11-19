@@ -5,7 +5,7 @@
 // 2013-04-22 GONG Chen <chen.sst@gmail.com>
 //
 #include <boost/algorithm/string.hpp>
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <boost/scope_exit.hpp>
 #include <rime/deployer.h>
 #include <rime/dict/db.h>
@@ -41,7 +41,7 @@ bool UserDbRecoveryTask::Run(Deployer* deployer) {
   LOG(INFO) << "recreating db file.";
   if (db_->Exists()) {
     std::error_code ec;
-    std::filesystem::rename(db_->file_path(),
+    rime::fs::rename(db_->file_path(),
                             path(db_->file_path()).concat(".old"), ec);
     if (ec && !db_->Remove()) {
       LOG(ERROR) << "Error removing db file '" << db_->file_path() << "'.";
@@ -67,12 +67,12 @@ void UserDbRecoveryTask::RestoreUserDataFromSnapshot(Deployer* deployer) {
   const path& dir(deployer->user_data_sync_dir());
   // try *.userdb.txt
   path snapshot_path = dir / (dict_name + UserDb::snapshot_extension());
-  if (!std::filesystem::exists(snapshot_path)) {
+  if (!rime::fs::exists(snapshot_path)) {
     // try *.userdb.*.snapshot
     string legacy_snapshot_file =
         dict_name + component->extension() + ".snapshot";
     snapshot_path = dir / legacy_snapshot_file;
-    if (!std::filesystem::exists(snapshot_path)) {
+    if (!rime::fs::exists(snapshot_path)) {
       return;  // not found
     }
   }

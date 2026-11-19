@@ -9,7 +9,7 @@
 
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -29,7 +29,7 @@
 #include <windows.h>
 #endif
 
-namespace fs = std::filesystem;
+namespace fs = rime::fs;
 
 namespace rime {
 
@@ -651,12 +651,12 @@ bool CleanOldLogFiles::Run(Deployer* deployer) {
       // preparing files
       for (const auto& entry : fs::directory_iterator(dir)) {
         const string& file_name(entry.path().filename().u8string());
-        if (entry.is_regular_file() && !entry.is_symlink() &&
+        if (fs::is_regular_file(entry.path()) && !fs::is_symlink(entry.path()) &&
             boost::starts_with(file_name, app_name) &&
             boost::ends_with(file_name, ".log") &&
             !boost::contains(file_name, today)) {
           files_to_remove.push_back(entry.path());
-        } else if (entry.is_symlink()) {
+        } else if (fs::is_symlink(entry.path())) {
           auto target = fs::read_symlink(entry.path());
           const string& target_file_name(target.filename().u8string());
           if (boost::starts_with(target_file_name, app_name) &&

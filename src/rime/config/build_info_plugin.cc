@@ -2,7 +2,7 @@
 // Copyright RIME Developers
 // Distributed under the BSD License
 //
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <rime/service.h>
 #include <rime/algo/fs.h>
 #include <rime/config/config_compiler.h>
@@ -37,7 +37,7 @@ bool BuildInfoPlugin::ReviewLinkOutput(ConfigCompiler* compiler,
     }
     // TODO: store as 64-bit number to avoid the year 2038 problem
     timestamps[resource->resource_id] =
-        (int)filesystem::to_time_t(std::filesystem::last_write_time(file_path));
+        (int)filesystem::to_time_t(rime::fs::last_write_time(file_path));
   });
 #endif
   return true;

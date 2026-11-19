@@ -5,7 +5,7 @@
 // 2011-11-02 GONG Chen <chen.sst@gmail.com>
 //
 #include <boost/algorithm/string.hpp>
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <rime/common.h>
 #include <rime/resource.h>
 #include <rime/service.h>
@@ -40,7 +40,7 @@ Db::Db(const path& file_path, const string& name)
     : name_(name), file_path_(file_path) {}
 
 bool Db::Exists() const {
-  return std::filesystem::exists(file_path());
+  return rime::fs::exists(file_path());
 }
 
 bool Db::Remove() {
@@ -48,7 +48,7 @@ bool Db::Remove() {
     LOG(ERROR) << "attempt to remove opened db '" << name_ << "'.";
     return false;
   }
-  return std::filesystem::remove(file_path());
+  return rime::fs::remove(file_path());
 }
 
 bool Db::CreateMetadata() {

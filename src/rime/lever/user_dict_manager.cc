@@ -6,7 +6,7 @@
 //
 #include <fstream>
 #include <boost/algorithm/string.hpp>
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <boost/scope_exit.hpp>
 #include <rime/common.h>
 #include <rime/deployer.h>
@@ -16,7 +16,7 @@
 #include <rime/dict/user_db.h>
 #include <rime/lever/user_dict_manager.h>
 
-namespace fs = std::filesystem;
+namespace fs = rime::fs;
 
 namespace rime {
 

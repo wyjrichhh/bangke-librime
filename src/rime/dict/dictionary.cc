@@ -4,7 +4,7 @@
 //
 // 2011-07-05 GONG Chen <chen.sst@gmail.com>
 //
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <rime/algo/syllabifier.h>
 #include <rime/common.h>
 #include <rime/dict/dictionary.h>
@@ -362,8 +362,8 @@ bool Dictionary::Decode(const Code& code, vector<string>* result) {
 }
 
 bool Dictionary::Exists() const {
-  return std::filesystem::exists(prism_->file_path()) && !tables_.empty() &&
-         std::filesystem::exists(tables_[0]->file_path());
+  return rime::fs::exists(prism_->file_path()) && !tables_.empty() &&
+         rime::fs::exists(tables_[0]->file_path());
 }
 
 bool Dictionary::Remove() {

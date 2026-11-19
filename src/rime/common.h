@@ -9,7 +9,7 @@
 
 #include <rime/build_config.h>
 
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <functional>
 #include <list>
 #include <map>
@@ -81,8 +81,8 @@ inline an<T> New(Args&&... args) {
 using boost::signals2::connection;
 using boost::signals2::signal;
 
-class path : public std::filesystem::path {
-  using fs_path = std::filesystem::path;
+class path : public rime::fs::path {
+  using fs_path = rime::fs::path;
 
  public:
   path() : fs_path() {}
@@ -91,13 +91,18 @@ class path : public std::filesystem::path {
 #ifdef _WIN32
   // convert utf-8 string to native encoding path.
   explicit path(const std::string& utf8_path)
-      : fs_path(std::filesystem::u8path(utf8_path)) {}
+      : fs_path(rime::fs::u8path(utf8_path)) {}
   explicit path(const char* utf8_path)
-      : fs_path(std::filesystem::u8path(utf8_path)) {}
+      : fs_path(rime::fs::u8path(utf8_path)) {}
 #else
   // disable implicit conversion from string to path for development purpose.
   explicit path(const std::string& utf8_path) : fs_path(utf8_path) {}
   explicit path(const char* utf8_path) : fs_path(utf8_path) {}
+#endif
+
+#ifdef RIME_LEGACY_FILESYSTEM
+  // GCC 7 streams accept strings rather than experimental filesystem paths.
+  operator std::string() const { return this->u8string(); }
 #endif
 
   path& operator/=(const path& p) { return *this = fs_path::operator/=(p); }

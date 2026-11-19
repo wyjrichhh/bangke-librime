@@ -7,7 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <boost/algorithm/string.hpp>
-#include <filesystem>
+#include <rime/compat/filesystem.h>
 #include <yaml-cpp/yaml.h>
 #include <rime/config/config_compiler.h>
 #include <rime/config/config_cow_ref.h>
@@ -65,7 +65,7 @@ bool ConfigData::LoadFromFile(const path& file_path, ConfigCompiler* compiler) {
   file_path_ = file_path;
   modified_ = false;
   root.reset();
-  if (!std::filesystem::exists(file_path)) {
+  if (!rime::fs::exists(file_path)) {
     if (!boost::ends_with(file_path.u8string(), ".custom.yaml"))
       LOG(WARNING) << "nonexistent config file '" << file_path << "'.";
     return false;
